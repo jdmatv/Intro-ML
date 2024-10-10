@@ -1,0 +1,89 @@
+---
+title: "Homework 1"
+format: html
+jupyter: julia-1.10
+---
+__Due date:__ 2024-10-09 at 8:30 AM PT
+
+----
+
+__Name:__ Joseph Matveyenko
+
+__Date:__ `{julia} using Dates; today()`
+
+__Question 1:__ Let $X$ be a Uniform(0, 1) random variable and let $Y = X^3 + X^2 + X$. Write a function that estimates the mean and variance of $Y$ using Monte Carlo simulation.
+Your function should take as input the number of simulations to run and return the estimated mean and variance of $Y$.
+
+```{julia}
+using Statistics
+
+# define y function
+function y_func(x::Float64)
+    return x^3 + x^2 + x
+end 
+
+# define monte carlo function
+function monte_carlo_x(trials::Int)
+    results = [y_func(rand(Float64)) for _ in 1:trials]
+    return mean(results), var(results)
+end
+```
+
+__Question 2:__ Test the function above with 10,000 simulations. What are the estimated mean and variance of $Y$?
+
+```{julia}
+# run 10,000 trials
+mc_mean, mc_var = monte_carlo_x(10000)
+output = """
+Mean = $(round(mc_mean, digits=2))
+Variance = $(round(mc_var, digits=2))
+"""
+print(output)
+```
+
+__Question 3:__ Time how long it takes to run the function above with 10,000; 100,000; 1,000,000; and 10,000,000 simulations. Display a table or data frame with columns corresponding to the number of simulations, the time it took to run them (in seconds), and the number of simulations per second.
+
+```{julia}
+using DataFrames
+
+# define function to measure run time
+function runtime(trials::Int)
+    result, time = @timed begin
+        monte_carlo_x(trials)
+    end
+    return time
+end
+
+# four sim sizes
+sim_sizes = [10000, 100000, 1000000, 10000000]
+
+# run simulation for each size
+sim_runtimes = [runtime(x) for x in sim_sizes]
+
+# creating dataframe
+sim_df = DataFrame(simulations = sim_sizes, runtime = sim_runtimes)
+sim_df.sim_per_sec = sim_df.simulations ./ sim_df.runtime
+print(sim_df)
+```
+
+__LLM Use:__ I used RANDChat throughout this assignment to familiarize myself with Julia syntax, install packages, and resolve code errors. I used the latest GPT-4 model available with the default system prompt: "You are an AI at RAND. You are scholarly and unbiased. Follow the user's instructions carefully. Respond using markdown." I asked the system the following prompts:
+
+* 'how to sample random variable in julia'
+* 'simple monte carlo in julia'
+* 'why _ as iterator'
+* 'is this used in other languages'
+* 'best practice for creating an array with for loop in julia'
+* 'mean and variance in julia'
+* 'Warning: The project dependencies or compat requirements have changed since the manifest was last resolved...'
+* 'f string in julia'
+* 'rounding in julia / what does %.2f mean'
+* 'printing strings in julia with line breaks'
+* 'why println vs. print'
+* 'dataframe in julia'
+* 'time run time in julia'
+* '\@time output variable'
+* 'divide first element of array by first element of other array, then second, etc.'
+* 'dataframe mutate divide one column by another column'
+* 'ERROR: The following package names could not be resolved:...'
+* 'bulleted list in quarto/markdown'
+
