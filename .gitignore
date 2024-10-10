@@ -1,0 +1,10 @@
+# this is a .gitgnore file for files to not commit
+
+# ignore files in data folder
+data/* 
+
+# ignore all pdf files
+*.pdf
+
+**/libs/*
+env/*
