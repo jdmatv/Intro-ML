@@ -7,7 +7,9 @@ __Due Date:__ 2022-10-16 at 8:30 AM PT
 ---
 
 
-__Name:__ \<your name here\>
+__Name:__ Joseph Matveyenko
+
+__Date:__ `{julia} using Dates; today()`
 
 
 
@@ -25,26 +27,69 @@ For this assignment, you will practice downloadings, cleaning, and analyzing dat
 
 __1. Import the NRI data. Ensure that the [FIPS code](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standard_state_code) variable ('STCOFIPS') is correctly identified as a string / character variable. Otherwise, the leading zeros will be removed.__
 
-```
-# your code here
+```{julia}
+using DataFrames
+using CSV
+
+# ensure that 'STCOFIPS' is identified as a string
+column_types = Dict(:STCOFIPS => String)
+
+# import NRI CSV data
+nri_dat = CSV.read("data/raw/NRI_Table_Counties.csv", types=column_types, DataFrame)
+first(nri_dat, 3)
 ```
 
 __2. Subset the NRI data to include only the 5-digit state/county FIPS code and all colums ending with '\_AFREQ' and '\_RISKR'. Each of these columns represents a different hazard type.__
 
-```
-# your code here
+```{julia}
+# string endings
+str_ends = ["_AFREQ", "_RISKR"]
+
+# get columns to include
+include_cols = ["STCOFIPS"; [i for i in names(nri_dat) if any(endswith(i, str) for str in str_ends)]]
+
+#subsetting dataframe
+nri_dat_subset = nri_dat[:, include_cols]
+first(nri_dat_subset, 3)
 ```
 __3. Create a table / dataframe that, for each hazard type, shows the number of missing values in the '\_AFREQ' and '\_RISKR' columns.__
-```
-# your code here
+```{julia}
+# create new dataframe by counting missing values
+nri_dat_missing = DataFrame(
+    Column = names(nri_dat_subset)[2:end],
+    MissingCount = [sum(ismissing, nri_dat_subset[:, col]) for col in names(nri_dat_subset)[2:end]]
+)
+first(nri_dat_missing, 5)
 ```
 __4. Create a new column in the original data table indicating whether or not 'AVLN_AFREQ' is missing or observed. Show the cross-tabulation of the 'AVLN_AFREQ' missingness and 'AVLN_RISKR' columns (including missing values). What do you observe?__
+```{julia}
+using FreqTables
+
+# create column AVLN_MISS that = 1 when AVLN_AFREQ missing
+transform!(nri_dat_subset, :AVLN_AFREQ => ByRow(ismissing) => :AVLN_MISS)
+
+# cross tabulation of AVLN_MISS and AVLN_RISK
+freqtable(nri_dat_subset.AVLN_RISKR, nri_dat_subset.AVLN_MISS)
 ```
-# your code here
-```
+
+We observe that all instances when the variable `AVLN_AFREQ` is missing, `AVLN_RISKR` is coded as 'Not Applicable'.
+
 __5. Assuming that a risk that is "not applicable" to a county has an annualized frequency of 0, impute the relevant missing values in the '\_AFREQ' columns with 0.__
-```
-# your code here
+```{julia}
+# list of variables for which to impute missing values
+imp_vars = [col for col in names(nri_dat_subset) if endswith(col, "_AFREQ")]
+risk_vars = [col for col in names(nri_dat_subset) if endswith(col, "_RISKR")]
+new_vars = [i * "_IMP" for i in imp_vars]
+
+impute_missing(x, y) = ifelse.(y == "Not Applicable" .&& ismissing(x), 0, y) 
+
+for (iv, rv, nv) in zip(imp_vars, risk_vars, new_vars)
+    transform!(nri_dat_subset, [Symbol(iv), Symbol(rv)] => impute_missing => Symbol(nv))
+end
+
+first(nri_dat_subset, 10)
+
+# assuming that NA means the freq is 0, imput missing values
 ```
 
 
