@@ -8,3 +8,6 @@ data/*
 
 **/libs/*
 env/*
+
+# ignore cache
+.DS_Store
