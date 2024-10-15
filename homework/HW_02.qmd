@@ -54,11 +54,13 @@ first(nri_dat_subset, 3)
 ```
 __3. Create a table / dataframe that, for each hazard type, shows the number of missing values in the '\_AFREQ' and '\_RISKR' columns.__
 ```{julia}
+# function to count missing values
+function count_missing(df)
+    return DataFrame(Column = names(df), MissingCount = [sum(ismissing, df[:, col]) for col in names(df)])
+end
+
 # create new dataframe by counting missing values
-nri_dat_missing = DataFrame(
-    Column = names(nri_dat_subset)[2:end],
-    MissingCount = [sum(ismissing, nri_dat_subset[:, col]) for col in names(nri_dat_subset)[2:end]]
-)
+nri_dat_missing = count_missing(nri_dat_subset[:, 2:end])
 first(nri_dat_missing, 5)
 ```
 __4. Create a new column in the original data table indicating whether or not 'AVLN_AFREQ' is missing or observed. Show the cross-tabulation of the 'AVLN_AFREQ' missingness and 'AVLN_RISKR' columns (including missing values). What do you observe?__
@@ -81,15 +83,15 @@ imp_vars = [col for col in names(nri_dat_subset) if endswith(col, "_AFREQ")]
 risk_vars = [col for col in names(nri_dat_subset) if endswith(col, "_RISKR")]
 new_vars = [i * "_IMP" for i in imp_vars]
 
-impute_missing(x, y) = ifelse.(y == "Not Applicable" .&& ismissing(x), 0, y) 
+
+# assuming that NA means the freq is 0, imput missing values
+impute_missing(x, y) = ifelse.(y .== "Not Applicable" .&& ismissing.(x), 0, x) 
 
 for (iv, rv, nv) in zip(imp_vars, risk_vars, new_vars)
     transform!(nri_dat_subset, [Symbol(iv), Symbol(rv)] => impute_missing => Symbol(nv))
 end
 
 first(nri_dat_subset, 10)
-
-# assuming that NA means the freq is 0, imput missing values
 ```
 
 
@@ -98,14 +100,26 @@ first(nri_dat_subset, 10)
 __1. Import the SVI data. Ensure that the FIPS code is correctly identified as a string / character variable. Otherwise, the leading zeros will be removed.__
 __1. Subset the SVI data to include only the following columns:__
 `ST, STATE, ST_ABBR, STCNTY, COUNTY, FIPS, LOCATION, AREA_SQMI, E_TOTPOP, EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT, EP_AFAM, EP_HISP, EP_ASIAN, EP_AIAN, EP_NHPI, EP_TWOMORE, EP_OTHERRACE`
-```
-# your code here
+```{julia}
+# ensure that 'FIPS' is identified as a string
+column_types = Dict(:FIPS => String)
+
+# import SVI CSV data
+svi_dat = CSV.read("data/raw/SVI_2022_US_county.csv", types=column_types, DataFrame)
+
+# subset data to include given columns
+given_columns_str = "ST, STATE, ST_ABBR, STCNTY, COUNTY, FIPS, LOCATION, AREA_SQMI, E_TOTPOP, EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT, EP_AFAM, EP_HISP, EP_ASIAN, EP_AIAN, EP_NHPI, EP_TWOMORE, EP_OTHERRACE"
+given_columns = strip.(split(given_columns_str, ","))
+svi_dat_subset = svi_dat[:, given_columns]
+first(svi_dat, 3)
 ```
 __2. Create a table / dataframe that shows the number of missing values in each column.
 (Hint: if you wrote a function for Task 1, you can reuse it here.)__
 
-```
-# your code here
+```{julia}
+# reusing the function from part 1
+svi_dat_missing = count_missing(svi_dat_subset)
+first(svi_dat_missing, 5)
 ```
 
 ## Task 3 - Data Merging
