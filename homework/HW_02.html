@@ -117,7 +117,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <section id="task-1---nri-data-cleaning" class="level2">
 <h2 class="anchored" data-anchor-id="task-1---nri-data-cleaning">Task 1 - NRI Data Cleaning</h2>
 <p><strong>1. Import the NRI data. Ensure that the <a href="https://en.wikipedia.org/wiki/Federal_Information_Processing_Standard_state_code">FIPS code</a> variable (‘STCOFIPS’) is correctly identified as a string / character variable. Otherwise, the leading zeros will be removed.</strong></p>
-<div id="3a865e45" class="cell" data-execution_count="1">
+<div id="e64d4ea2" class="cell" data-execution_count="1">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">DataFrames</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">CSV</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -127,7 +127,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="co"># import NRI CSV data</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a>nri_dat <span class="op">=</span> CSV.<span class="fu">read</span>(<span class="st">"data/raw/NRI_Table_Counties.csv"</span>, types<span class="op">=</span>column_types, DataFrame)</span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">first</span>(nri_dat, <span class="fl">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="11">
+<div class="cell-output cell-output-display" data-execution_count="3">
 <div><div style="float: left;"><span>3×465 DataFrame</span></div><div style="float: right;"><span style="font-style: italic;">365 columns omitted</span></div><div style="clear: both;"></div></div><div class="data-frame" style="overflow-x: scroll;">
 <table class="data-frame caption-top table table-sm table-striped small" data-quarto-postprocess="true">
 <thead>
@@ -659,7 +659,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p><strong>2. Subset the NRI data to include only the 5-digit state/county FIPS code and all colums ending with ‘_AFREQ’ and ‘_RISKR’. Each of these columns represents a different hazard type.</strong></p>
-<div id="b92c7eeb" class="cell" data-execution_count="2">
+<div id="c570d7cb" class="cell" data-execution_count="2">
 <div class="sourceCode cell-code" id="cb2"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># string endings</span></span>
 <span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>str_ends <span class="op">=</span> [<span class="st">"_AFREQ"</span>, <span class="st">"_RISKR"</span>]</span>
 <span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a></span>
@@ -669,7 +669,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="co">#subsetting dataframe</span></span>
 <span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>nri_dat_subset <span class="op">=</span> nri_dat[<span class="op">:</span>, include_cols]</span>
 <span id="cb2-9"><a href="#cb2-9" aria-hidden="true" tabindex="-1"></a><span class="fu">first</span>(nri_dat_subset, <span class="fl">3</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="12">
+<div class="cell-output cell-output-display" data-execution_count="4">
 <div><div style="float: left;"><span>3×37 DataFrame</span></div><div style="clear: both;"></div></div><div class="data-frame" style="overflow-x: scroll;">
 <table class="data-frame caption-top table table-sm table-striped small" data-quarto-postprocess="true">
 <thead>
@@ -881,14 +881,14 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p><strong>3. Create a table / dataframe that, for each hazard type, shows the number of missing values in the ‘_AFREQ’ and ‘_RISKR’ columns.</strong></p>
-<div id="900cab73" class="cell" data-execution_count="3">
+<div id="18267acf" class="cell" data-execution_count="3">
 <div class="sourceCode cell-code" id="cb3"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># create new dataframe by counting missing values</span></span>
 <span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>nri_dat_missing <span class="op">=</span> <span class="fu">DataFrame</span>(</span>
 <span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>    Column <span class="op">=</span> <span class="fu">names</span>(nri_dat_subset)[<span class="fl">2</span><span class="op">:</span><span class="kw">end</span>],</span>
 <span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a>    MissingCount <span class="op">=</span> [<span class="fu">sum</span>(ismissing, nri_dat_subset[<span class="op">:</span>, col]) for col <span class="kw">in</span> <span class="fu">names</span>(nri_dat_subset)[<span class="fl">2</span><span class="op">:</span><span class="kw">end</span>]]</span>
 <span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>)</span>
 <span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="fu">first</span>(nri_dat_missing, <span class="fl">5</span>)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="13">
+<div class="cell-output cell-output-display" data-execution_count="5">
 <div><div style="float: left;"><span>5×2 DataFrame</span></div><div style="clear: both;"></div></div><div class="data-frame" style="overflow-x: scroll;">
 <table class="data-frame caption-top table table-sm table-striped small" data-quarto-postprocess="true">
 <thead>
@@ -935,7 +935,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 </div>
 </div>
 <p><strong>4. Create a new column in the original data table indicating whether or not ‘AVLN_AFREQ’ is missing or observed. Show the cross-tabulation of the ‘AVLN_AFREQ’ missingness and ‘AVLN_RISKR’ columns (including missing values). What do you observe?</strong></p>
-<div id="bdc7353f" class="cell" data-execution_count="4">
+<div id="bf11387f" class="cell" data-execution_count="4">
 <div class="sourceCode cell-code" id="cb4"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">FreqTables</span></span>
 <span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a><span class="co"># create column AVLN_MISS that = 1 when AVLN_AFREQ missing</span></span>
@@ -943,7 +943,7 @@ pre > code.sourceCode > span > a:first-child::before { text-decoration: underlin
 <span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a><span class="co"># cross tabulation of AVLN_MISS and AVLN_RISK</span></span>
 <span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a><span class="fu">freqtable</span>(nri_dat_subset.AVLN_RISKR, nri_dat_subset.AVLN_MISS)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="14">
+<div class="cell-output cell-output-display" data-execution_count="6">
 <pre><code>6×2 Named Matrix{Int64}
         Dim1 ╲ Dim2 │ false   true
 ────────────────────┼─────────────
@@ -957,7 +957,7 @@ Very Low            │    99      0</code></pre>
 </div>
 <p>We observe that all instances when the variable <code>AVLN_AFREQ</code> is missing, <code>AVLN_RISKR</code> is coded as ‘Not Applicable’.</p>
 <p><strong>5. Assuming that a risk that is “not applicable” to a county has an annualized frequency of 0, impute the relevant missing values in the ‘_AFREQ’ columns with 0.</strong></p>
-<div id="ce943813" class="cell" data-execution_count="5">
+<div id="32fcb99c" class="cell" data-execution_count="5">
 <div class="sourceCode cell-code" id="cb6"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="co"># list of variables for which to impute missing values</span></span>
 <span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>imp_vars <span class="op">=</span> [col for col <span class="kw">in</span> <span class="fu">names</span>(nri_dat_subset) if <span class="fu">endswith</span>(col, <span class="st">"_AFREQ"</span>)]</span>
 <span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>risk_vars <span class="op">=</span> [col for col <span class="kw">in</span> <span class="fu">names</span>(nri_dat_subset) if <span class="fu">endswith</span>(col, <span class="st">"_RISKR"</span>)]</span>
@@ -972,7 +972,7 @@ Very Low            │    99      0</code></pre>
 <span id="cb6-12"><a href="#cb6-12" aria-hidden="true" tabindex="-1"></a><span class="fu">first</span>(nri_dat_subset, <span class="fl">10</span>)</span>
 <span id="cb6-13"><a href="#cb6-13" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb6-14"><a href="#cb6-14" aria-hidden="true" tabindex="-1"></a><span class="co"># assuming that NA means the freq is 0, imput missing values</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="15">
+<div class="cell-output cell-output-display" data-execution_count="7">
 <div><div style="float: left;"><span>10×56 DataFrame</span></div><div style="clear: both;"></div></div><div class="data-frame" style="overflow-x: scroll;">
 <table class="data-frame caption-top table table-sm table-striped small" data-quarto-postprocess="true">
 <thead>
