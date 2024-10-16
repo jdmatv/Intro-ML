@@ -31,6 +31,9 @@ __1. Import the NRI data. Ensure that the [FIPS code](https://en.wikipedia.org/w
 using DataFrames
 using CSV
 
+# change working dir
+cd(dirname(pwd()))
+
 # ensure that 'STCOFIPS' is identified as a string
 column_types = Dict(:STCOFIPS => String)
 
