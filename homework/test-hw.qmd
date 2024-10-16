@@ -1,0 +1,24 @@
+---
+title: "Untitled"
+format: html
+---
+
+```{julia}
+using DataFrames
+using CSV
+
+# change working dir
+println(pwd())
+readdir()
+```
+
+```{julia}
+cd(dirname(pwd()))
+println(pwd())
+readdir()
+```
+
+```{julia}
+cd("data/raw")
+readdir()
+```
