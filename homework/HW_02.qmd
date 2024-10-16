@@ -117,24 +117,40 @@ __2. Create a table / dataframe that shows the number of missing values in each 
 (Hint: if you wrote a function for Task 1, you can reuse it here.)__
 
 ```{julia}
-# reusing the function from part 1
+# reusing the function from part 1 to count missing values
 svi_dat_missing = count_missing(svi_dat_subset)
 first(svi_dat_missing, 5)
 ```
 
 ## Task 3 - Data Merging
 __1. Identify any FIPS codes that are present in the NRI data but not in the SVI data and vice versa. Describe any discrepancies and possible causes? What to these discrepancies, if any, mean for interpreting results based on the merged dataset moving forward?__
+```{julia}
+# identify unique FIPS codes in both datasets
+nri_fips = unique(nri_dat_subset.STCOFIPS)
+svi_fips = unique(svi_dat_subset.FIPS)
+
+# identify FIPS codes in NRI but not in SVI
+nri_not_in_svi = setdiff(nri_fips, svi_fips)
+println("In NRI but not in SVI: $nri_not_in_svi")
+
+# identify FIPS codes in SVI but not in NRI
+svi_not_in_nri = setdiff(svi_fips, nri_fips)
+println("In SVI but not in NRI: $svi_not_in_nri")
 ```
-# your code here
-```
+There are discrepancies in the FIPS codes for Connecticut; both the NRI and SVI data contains data on Connecticut but may be using different FIPS code variants to represent the same counties. Additionally, the NRI data includes FIPS codes for American Somoa, Guam, the Northern Mariana Islands, Puerto Rico, and U.S. Virgin Islands, which are not present in the SVI data set. These discrepancies mean that it will likely not be possible to gain insight on the U.S. territories not covered in the SVI data through merging the two data sets. Further, the CT discrepancies should be reconciled prior to analysis.
+
 __2. Merge the NRI and SVI data on the FIPS code. Use an outer join to keep all counties in the final dataset.__
-```
-# your code here
+```{julia}
+# merging both datasets
+merged_nri_svi = outerjoin(nri_dat_subset, svi_dat_subset, on = :STCOFIPS => :FIPS)
+first(merged_nri_svi, 5)
 ```
 __3. Create a table / dataframe that shows the number of missing values in each column of the merged dataset.__
 
-```
-# your code here
+```{julia}
+# reusing the function from part 1 to count missing values
+merged_nri_svi_missing = count_missing(merged_nri_svi)
+first(merged_nri_svi_missing, 5)
 ```
 
 ## Task 4 - Data Analysis
@@ -142,6 +158,35 @@ __3. Create a table / dataframe that shows the number of missing values in each 
 __1. For each numerical variable in the merged dataset, plot a histogram showing the distribution of values.
 (Hint: write a function to make the histogram for a single variable, then use a loop or apply function to make the histograms for all numerical variables.)__
 
-```
-# your code here
+```{julia}
+using Plots
+using RCall
+
+
+# function to make histograms
+function plot_hist(x, titles; bins=100)
+    R"""
+    for (i in 1:length($x)){
+        hist(unlist($x[i]), breaks=100, main=$titles[i], xlab='Value')
+    }
+    """
+end
+
+# creating empty arrays for data to plot
+plot_data = []
+plot_titles = String[]
+# iterate through each col of df
+for i in names(merged_nri_svi)
+    # remove missing values
+    clean_col = collect(skipmissing(merged_nri_svi[:,Symbol(i)]))
+    # check if numeric
+    if eltype(clean_col)<:Number && !isempty(clean_col) && length(unique(clean_col))>5
+        # adding data to arrays
+        push!(plot_data, [round(x, digits=5) for x in clean_col if x isa Number])
+        push!(plot_titles, i)
+    end
+end
+
+# generating R plots
+plot_hist(plot_data, plot_titles)
 ```
