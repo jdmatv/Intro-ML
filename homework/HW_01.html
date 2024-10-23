@@ -128,9 +128,9 @@ window.Quarto = {
 <p><strong>Due date:</strong> 2024-10-09 at 8:30 AM PT</p>
 <hr>
 <p><strong>Name:</strong> Joseph Matveyenko</p>
-<p><strong>Date:</strong> 2024-10-15</p>
+<p><strong>Date:</strong> <code>{julia} using Dates; today()</code></p>
 <p><strong>Question 1:</strong> Let <span class="math inline">\(X\)</span> be a Uniform(0, 1) random variable and let <span class="math inline">\(Y = X^3 + X^2 + X\)</span>. Write a function that estimates the mean and variance of <span class="math inline">\(Y\)</span> using Monte Carlo simulation. Your function should take as input the number of simulations to run and return the estimated mean and variance of <span class="math inline">\(Y\)</span>.</p>
-<div id="24a0ebf6" class="cell" data-execution_count="1">
+<div id="cell-2" class="cell">
 <div class="sourceCode cell-code" id="cb1"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">Statistics</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="co"># define y function</span></span>
@@ -143,56 +143,39 @@ window.Quarto = {
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>    results <span class="op">=</span> [<span class="fu">y_func</span>(<span class="fu">rand</span>(<span class="dt">Float64</span>)) for _ <span class="kw">in</span> <span class="fl">1</span><span class="op">:</span>trials]</span>
 <span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> <span class="fu">mean</span>(results), <span class="fu">var</span>(results)</span>
 <span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-display" data-execution_count="3">
-<pre><code>monte_carlo_x (generic function with 1 method)</code></pre>
-</div>
 </div>
 <p><strong>Question 2:</strong> Test the function above with 10,000 simulations. What are the estimated mean and variance of <span class="math inline">\(Y\)</span>?</p>
-<div id="c73ce8e3" class="cell" data-execution_count="2">
-<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run 10,000 trials</span></span>
-<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>mc_mean, mc_var <span class="op">=</span> <span class="fu">monte_carlo_x</span>(<span class="fl">10000</span>)</span>
-<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> <span class="st">"""</span></span>
-<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="st">Mean = </span><span class="sc">$</span>(<span class="fu">round</span>(mc_mean, digits<span class="op">=</span><span class="fl">2</span>))</span>
-<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="st">Variance = </span><span class="sc">$</span>(<span class="fu">round</span>(mc_var, digits<span class="op">=</span><span class="fl">2</span>))</span>
-<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
-<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(output)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>Mean = 1.1
-Variance = 0.74</code></pre>
-</div>
+<div id="cell-4" class="cell">
+<div class="sourceCode cell-code" id="cb2"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># run 10,000 trials</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>mc_mean, mc_var <span class="op">=</span> <span class="fu">monte_carlo_x</span>(<span class="fl">10000</span>)</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>output <span class="op">=</span> <span class="st">"""</span></span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a><span class="st">Mean = </span><span class="sc">$</span>(<span class="fu">round</span>(mc_mean, digits<span class="op">=</span><span class="fl">2</span>))</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a><span class="st">Variance = </span><span class="sc">$</span>(<span class="fu">round</span>(mc_var, digits<span class="op">=</span><span class="fl">2</span>))</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a><span class="st">"""</span></span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(output)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p><strong>Question 3:</strong> Time how long it takes to run the function above with 10,000; 100,000; 1,000,000; and 10,000,000 simulations. Display a table or data frame with columns corresponding to the number of simulations, the time it took to run them (in seconds), and the number of simulations per second.</p>
-<div id="a1d55346" class="cell" data-execution_count="3">
-<div class="sourceCode cell-code" id="cb5"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">DataFrames</span></span>
-<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co"># define function to measure run time</span></span>
-<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">runtime</span>(trials<span class="op">::</span><span class="dt">Int</span>)</span>
-<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a>    result, time <span class="op">=</span> <span class="pp">@timed</span> <span class="cf">begin</span></span>
-<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">monte_carlo_x</span>(trials)</span>
-<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
-<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> time</span>
-<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
-<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a><span class="co"># four sim sizes</span></span>
-<span id="cb5-12"><a href="#cb5-12" aria-hidden="true" tabindex="-1"></a>sim_sizes <span class="op">=</span> [<span class="fl">10000</span>, <span class="fl">100000</span>, <span class="fl">1000000</span>, <span class="fl">10000000</span>]</span>
-<span id="cb5-13"><a href="#cb5-13" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-14"><a href="#cb5-14" aria-hidden="true" tabindex="-1"></a><span class="co"># run simulation for each size</span></span>
-<span id="cb5-15"><a href="#cb5-15" aria-hidden="true" tabindex="-1"></a>sim_runtimes <span class="op">=</span> [<span class="fu">runtime</span>(x) for x <span class="kw">in</span> sim_sizes]</span>
-<span id="cb5-16"><a href="#cb5-16" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb5-17"><a href="#cb5-17" aria-hidden="true" tabindex="-1"></a><span class="co"># creating dataframe</span></span>
-<span id="cb5-18"><a href="#cb5-18" aria-hidden="true" tabindex="-1"></a>sim_df <span class="op">=</span> <span class="fu">DataFrame</span>(simulations <span class="op">=</span> sim_sizes, runtime <span class="op">=</span> sim_runtimes)</span>
-<span id="cb5-19"><a href="#cb5-19" aria-hidden="true" tabindex="-1"></a>sim_df.sim_per_sec <span class="op">=</span> sim_df.simulations <span class="op">./</span> sim_df.runtime</span>
-<span id="cb5-20"><a href="#cb5-20" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(sim_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-<div class="cell-output cell-output-stdout">
-<pre><code>4×3 DataFrame
- Row │ simulations  runtime      sim_per_sec 
-     │ Int64        Float64      Float64     
-─────┼───────────────────────────────────────
-   1 │       10000  2.2792e-5      4.3875e8
-   2 │      100000  0.000196458    5.09015e8
-   3 │     1000000  0.00227608     4.39351e8
-   4 │    10000000  0.0555743      1.79939e8</code></pre>
-</div>
+<div id="cell-6" class="cell">
+<div class="sourceCode cell-code" id="cb3"><pre class="sourceCode julia code-with-copy"><code class="sourceCode julia"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="im">using</span> <span class="bu">DataFrames</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a><span class="co"># define function to measure run time</span></span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="kw">function</span> <span class="fu">runtime</span>(trials<span class="op">::</span><span class="dt">Int</span>)</span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>    result, time <span class="op">=</span> <span class="pp">@timed</span> <span class="cf">begin</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>        <span class="fu">monte_carlo_x</span>(trials)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>    <span class="cf">end</span></span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>    <span class="cf">return</span> time</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a><span class="kw">end</span></span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a><span class="co"># four sim sizes</span></span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>sim_sizes <span class="op">=</span> [<span class="fl">10000</span>, <span class="fl">100000</span>, <span class="fl">1000000</span>, <span class="fl">10000000</span>]</span>
+<span id="cb3-13"><a href="#cb3-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-14"><a href="#cb3-14" aria-hidden="true" tabindex="-1"></a><span class="co"># run simulation for each size</span></span>
+<span id="cb3-15"><a href="#cb3-15" aria-hidden="true" tabindex="-1"></a>sim_runtimes <span class="op">=</span> [<span class="fu">runtime</span>(x) for x <span class="kw">in</span> sim_sizes]</span>
+<span id="cb3-16"><a href="#cb3-16" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-17"><a href="#cb3-17" aria-hidden="true" tabindex="-1"></a><span class="co"># creating dataframe</span></span>
+<span id="cb3-18"><a href="#cb3-18" aria-hidden="true" tabindex="-1"></a>sim_df <span class="op">=</span> <span class="fu">DataFrame</span>(simulations <span class="op">=</span> sim_sizes, runtime <span class="op">=</span> sim_runtimes)</span>
+<span id="cb3-19"><a href="#cb3-19" aria-hidden="true" tabindex="-1"></a>sim_df.sim_per_sec <span class="op">=</span> sim_df.simulations <span class="op">./</span> sim_df.runtime</span>
+<span id="cb3-20"><a href="#cb3-20" aria-hidden="true" tabindex="-1"></a><span class="fu">print</span>(sim_df)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <p><strong>LLM Use:</strong> I used RANDChat throughout this assignment to familiarize myself with Julia syntax, install packages, and resolve code errors. I used the latest GPT-4 model available with the default system prompt: “You are an AI at RAND. You are scholarly and unbiased. Follow the user’s instructions carefully. Respond using markdown.” I asked the system the following prompts:</p>
 <ul>
