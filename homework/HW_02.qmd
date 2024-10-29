@@ -28,8 +28,14 @@ For this assignment, you will practice downloadings, cleaning, and analyzing dat
 __1. Import the NRI data. Ensure that the [FIPS code](https://en.wikipedia.org/wiki/Federal_Information_Processing_Standard_state_code) variable ('STCOFIPS') is correctly identified as a string / character variable. Otherwise, the leading zeros will be removed.__
 
 ```{julia}
+using Base.Filesystem
 using DataFrames
 using CSV
+
+# set working dir to main
+if basename(pwd()) == "homework" 
+    cd(dirname(pwd()))
+end
 
 # ensure that 'STCOFIPS' is identified as a string
 column_types = Dict(:STCOFIPS => String)

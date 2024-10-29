@@ -10,13 +10,13 @@ __Due Date:__ 2022-10-30 at 8:30 AM PT
 ---
 
 
-__Name:__ \<your name here\>
+__Name:__ Joseph Matveyenko
 
 
 ## Preparation
 
 1. Create a 'code' folder in the root directory of your repository.
-1. Inside the 'code' folder, create a file '01_clean_data.\<your_extension_here\>'.
+1. Inside the 'code' folder, create a file '01_clean_data.jl.
 Your extension should be the one you use for your programming language of choice (e.g., '.R' for R, '.py' for Python, '.jl' for Julia).
 1. Copy any code from HW_02 you need to subset and merge the NRI and SVI datasets into the '01_clean_data' file.
 1. Add a 'processed' directory to the 'data' folder.
@@ -44,12 +44,119 @@ Here, we are going to use the CDC SVI data to create an alternative index based 
     Conversely, if you have a general missingness pattern where missing observations are scattered throughout the data, imputation is likely the best option._
     a. After dealing with the missing data, perform PCA on the SVI variables.
 
-    
+```{julia}
+using Base.Filesystem
+using DataFrames
+using CSV
+
+# set working dir to main
+if basename(pwd()) == "homework" 
+    cd(dirname(pwd()))
+end
+
+# load pre-processed data and ensure FIPS is read as a string
+column_types = Dict(:STCOFIPS => String)
+dat_path = "data/processed/merged_nri_svi.csv"
+merged_dat = CSV.read(dat_path, types=column_types, DataFrame)
+
+# subset the dataset
+given_columns_str = "EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT"
+given_columns = strip.(split(given_columns_str, ","))
+merged_subset = merged_dat[:, given_columns]
+
+# observe distribution of missing values
+missing_vals = sum(count(ismissing, col) for col in eachcol(merged_subset))
+missing_rows = count(row -> all(ismissing, row), eachrow(merged_subset))
+missing_cols = count(col -> all(ismissing, col), eachcol(merged_subset))
+missing_rows_vals = missing_rows*ncol(merged_subset)
+missing_cols_vals = missing_cols*nrow(merged_subset)
+println("Dims of data: $(size(merged_subset))")
+println("No. of missing vals: $missing_vals")
+println("No. of missing rows (vals in rows): $missing_rows ($missing_rows_vals)")
+println("No. of missing cols (vals in rows): $missing_cols ($missing_cols_vals)")
+```
+
+From observing the distribution of missing values, we can see that all missing values are in 96 missing rows (which likely correspond with the FIPS codes not covered in the SVI). Because all missing values are in missing rows, it's likely inappropraite to impute the values of entire rows. I chose to drop the 96 missing rows (of 3,240) for this reason.
+
+```{julia}
+using MultivariateStats
+using Statistics
+
+# dropping rows that are entirely missing (the only missing values in the data)
+dropmissing!(merged_subset)
+
+# standardizing each feature
+
+# defining two standardization function
+function normal_standardize(x)
+    return (x .- mean(x)) ./ std(x)
+end
+
+function log_standardize(x)
+    return (x .- minimum(x)) ./ (maximum(x) - minimum(x))
+end
+
+# observing the distribution of the given SVI variables in the previous assignment
+distributions = ["nm", "log", "nm", "log", "log", "nm", "nm", "nm", "nm", "log", "log", "log", "log", "log", "log", "log", "nm"]
+function_list = [dist == "nm" ? normal_standardize : log_standardize for dist in distributions]
+
+# standardize columns of data using function list
+for (col, f) in zip(names(merged_subset), function_list)
+    transform!(merged_subset, Symbol(col) => f => Symbol(col))
+end
+
+# performing PCA on the clean data
+M = fit(PCA, Matrix(merged_subset)'; method=:svd)
+```
 
 1. Plot the eigenvectors or loadings associated of the first three principal components.
 Make sure that the axis labels correspond to the variable names and not the indices of the variables.
 How would you interpret the first three prinicpal components?
 _Note: you can find the documentation for the SVI variables [here](https://www.atsdr.cdc.gov/placeandhealth/svi/documentation/SVI_documentation_2022.html)._
+
+```{julia}
+using Plots
+
+# Sample variable names
+variable_names = ["Var1", "Var2", "Var3", "Var4", "Var5", "Var6", "Var7", "Var8", "Var9", "Var10", "Var11", "Var12", "Var13", "Var14", "Var15", "Var16", "Var17"]
+
+# Loadings for the first three principal components
+loadings = [
+    0.917221  0.137966  -0.000170895;
+    0.04016   0.0121115  0.0120826;
+    0.27487   0.31845    0.854001;
+    0.055354  0.0173142 -0.0148358;
+    0.0436667 0.0276581 -0.0237311;
+    0.0923851 -0.880255  0.049905;
+    -0.0182112 0.738694  -0.528221;
+    0.719352  -0.453553 -0.0352629;
+    0.512758  0.676138   0.113581;
+    -0.00168729 0.025261 0.00304462;
+    0.0731974 0.107458  0.0265128;
+    -0.0201979 0.0205026 0.0306343;
+    0.0978743 -0.0253652 -0.0314427;
+    0.00873867 0.0239924 -0.0077699;
+    0.0178187 0.0100479  0.00565236;
+    0.0175534 -0.0016636 0.0161565;
+    0.790076  -0.186908 -0.352965
+]
+
+# Create a DataFrame for plotting
+df_loadings = DataFrame(loadings, :auto)
+rename!(df_loadings, :x1 => :PC1, :x2 => :PC2, :x3 => :PC3)
+
+# Plot the loadings
+plot(
+    bar(variable_names, df_loadings.PC1, label="PC1", legend=:topright),
+    bar(variable_names, df_loadings.PC2, label="PC2", legend=:topright),
+    bar(variable_names, df_loadings.PC3, label="PC3", legend=:topright),
+    layout = (3, 1),
+    xlabel = "Variables",
+    ylabel = "Loadings",
+    xtickrotation = 45,
+    size = (800, 600)
+)
+```
 1. There are several different ways to determine the number of principal components to retain.
 One common method is to retain principal components that explain a certain percentage of the variance in the data.
     a. How many principal components are needed to explain 80% of the variance in the data?
