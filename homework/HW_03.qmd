@@ -1,0 +1,67 @@
+---
+title: "Homework 3"
+format: 
+    html:
+        embed-resources: true
+---
+
+
+__Due Date:__ 2022-10-30 at 8:30 AM PT
+---
+
+
+__Name:__ \<your name here\>
+
+
+## Preparation
+
+1. Create a 'code' folder in the root directory of your repository.
+1. Inside the 'code' folder, create a file '01_clean_data.\<your_extension_here\>'.
+Your extension should be the one you use for your programming language of choice (e.g., '.R' for R, '.py' for Python, '.jl' for Julia).
+1. Copy any code from HW_02 you need to subset and merge the NRI and SVI datasets into the '01_clean_data' file.
+1. Add a 'processed' directory to the 'data' folder.
+1. Add a line at the end of the file that saves the merged dataset to 'data/processed' directory.
+1. Run the '01_clean_data' file to ensure that the merged dataset runs and creates the proper file.
+1. Add and commit the '01_clean_data' file to the repository.
+
+
+
+## Homework - Principal Component Analysis
+
+The CDC Social Vulnerability Index (SVI) takes multiple differen population-level inputs (e.g., % of the population living in poverty, % of the population without health insurance) to identify particularly vulnerable counties.
+While the CDC SVI scores rely on adding up the percentiles of various characteristics, there are alternative indexes (e.g., [University of South Carolina SoVI index](https://sc.edu/study/colleges_schools/artsandsciences/centers_and_institutes/hvri/data_and_resources/sovi/index.php)) that use methods like PCA.
+Here, we are going to use the CDC SVI data to create an alternative index based on PCA.
+
+1. The following variables are used in the SVI:
+`EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT`
+    a. Subset the merged dataset to only include the variables above and look at the pattern of missing data.
+    Are missing observations scattered throughout the data or are entire rows or columns missing?
+    b. PCA cannot handle missing values by default.
+    There are several options for handling missing data generally, including imputation, removing rows with missing data, or removing columns with missing data.
+    Deal with the missing data in a way that makes sense for the pattern of missing data and the goals of the analysis. Explain why you made this decision.
+    _Note: How you handle this is specific to the missing data pattern and the goals of the analysis.
+    For example, when entire rows or columns are missing, imputation may not be appropriate and dropping those rows or columns is usually the best option.
+    Conversely, if you have a general missingness pattern where missing observations are scattered throughout the data, imputation is likely the best option._
+    a. After dealing with the missing data, perform PCA on the SVI variables.
+
+    
+
+1. Plot the eigenvectors or loadings associated of the first three principal components.
+Make sure that the axis labels correspond to the variable names and not the indices of the variables.
+How would you interpret the first three prinicpal components?
+_Note: you can find the documentation for the SVI variables [here](https://www.atsdr.cdc.gov/placeandhealth/svi/documentation/SVI_documentation_2022.html)._
+1. There are several different ways to determine the number of principal components to retain.
+One common method is to retain principal components that explain a certain percentage of the variance in the data.
+    a. How many principal components are needed to explain 80% of the variance in the data?
+    a. How many principal components are needed to explain 90% of the variance in the data?
+1. An alternative approach is to plot the eigenvalues of the principal components and retain the components that are above the "elbow" in the plot. In other words the eigenvalues that are substantially larger than the rest.
+    a. Create a [scree plot](https://en.wikipedia.org/wiki/Scree_plot) of the eigenvalues of the principal components.
+    a. How many principal components should be retained based on the scree plot? This video may help: [PCA Scree Plot](https://youtu.be/vFUvNICWVz4?si=6NbyRcLRGT8L1HzI)
+1. Cross-validation is another method to determine the number of principal components to retain.
+This process requires some linear algebra that is beyond the scope of this course.
+As such, I have written example [code](https://github.com/gabehassler/PRGS-Intro-to-ML-2024/blob/main/examples/pca_cross_validation.jl) in Julia that demonstrates how to perform cross-validation.
+This procedure is a simplified versionof an approach explained in this [blog post](https://alexhwilliams.info/itsneuronalblog/2018/02/26/crossval/).
+For the purposes of this assignment, the `pca_cv_error` function is a black box that returns the cross-validation error for a given number of principal components.
+_Note: If you use a different programming language, you can use ChatGPT to translate the code to your language of choice._
+    a. Compute the cross-validation error for 1 to 17 principal components. If this process is parallelizable, parallelize the code. If setting a random number seed would make this work more reproducible, set a random number seed.
+    a. How many principal components should be retained based on the cross-validation error?
