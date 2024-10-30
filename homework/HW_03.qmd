@@ -1,0 +1,298 @@
+---
+title: "Homework 3"
+format: 
+    html:
+        embed-resources: true
+---
+
+
+__Due Date:__ 2022-10-30 at 8:30 AM PT
+---
+
+
+__Name:__ Joseph Matveyenko
+
+
+## Preparation
+
+1. Create a 'code' folder in the root directory of your repository.
+1. Inside the 'code' folder, create a file '01_clean_data.jl.
+Your extension should be the one you use for your programming language of choice (e.g., '.R' for R, '.py' for Python, '.jl' for Julia).
+1. Copy any code from HW_02 you need to subset and merge the NRI and SVI datasets into the '01_clean_data' file.
+1. Add a 'processed' directory to the 'data' folder.
+1. Add a line at the end of the file that saves the merged dataset to 'data/processed' directory.
+1. Run the '01_clean_data' file to ensure that the merged dataset runs and creates the proper file.
+1. Add and commit the '01_clean_data' file to the repository.
+
+
+
+## Homework - Principal Component Analysis
+
+The CDC Social Vulnerability Index (SVI) takes multiple differen population-level inputs (e.g., % of the population living in poverty, % of the population without health insurance) to identify particularly vulnerable counties.
+While the CDC SVI scores rely on adding up the percentiles of various characteristics, there are alternative indexes (e.g., [University of South Carolina SoVI index](https://sc.edu/study/colleges_schools/artsandsciences/centers_and_institutes/hvri/data_and_resources/sovi/index.php)) that use methods like PCA.
+Here, we are going to use the CDC SVI data to create an alternative index based on PCA.
+
+1. The following variables are used in the SVI:
+`EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT`
+    a. Subset the merged dataset to only include the variables above and look at the pattern of missing data.
+    Are missing observations scattered throughout the data or are entire rows or columns missing?
+    b. PCA cannot handle missing values by default.
+    There are several options for handling missing data generally, including imputation, removing rows with missing data, or removing columns with missing data.
+    Deal with the missing data in a way that makes sense for the pattern of missing data and the goals of the analysis. Explain why you made this decision.
+    _Note: How you handle this is specific to the missing data pattern and the goals of the analysis.
+    For example, when entire rows or columns are missing, imputation may not be appropriate and dropping those rows or columns is usually the best option.
+    Conversely, if you have a general missingness pattern where missing observations are scattered throughout the data, imputation is likely the best option._
+    a. After dealing with the missing data, perform PCA on the SVI variables.
+
+```{julia}
+using Base.Filesystem
+using DataFrames
+using CSV
+
+# set working dir to main
+if basename(pwd()) == "homework" 
+    cd(dirname(pwd()))
+end
+
+# load pre-processed data and ensure FIPS is read as a string
+column_types = Dict(:STCOFIPS => String)
+dat_path = "data/processed/merged_nri_svi.csv"
+merged_dat = CSV.read(dat_path, types=column_types, DataFrame)
+
+# subset the dataset
+given_columns_str = "EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT"
+given_columns = strip.(split(given_columns_str, ","))
+merged_subset = merged_dat[:, given_columns]
+
+# observe distribution of missing values
+missing_vals = sum(count(ismissing, col) for col in eachcol(merged_subset))
+missing_rows = count(row -> all(ismissing, row), eachrow(merged_subset))
+missing_cols = count(col -> all(ismissing, col), eachcol(merged_subset))
+missing_rows_vals = missing_rows*ncol(merged_subset)
+missing_cols_vals = missing_cols*nrow(merged_subset)
+println("Dims of data: $(size(merged_subset))")
+println("No. of missing vals: $missing_vals")
+println("No. of missing rows (vals in rows): $missing_rows ($missing_rows_vals)")
+println("No. of missing cols (vals in rows): $missing_cols ($missing_cols_vals)")
+```
+
+From observing the distribution of missing values, we can see that all missing values are in 96 missing rows (which likely correspond with the FIPS codes not covered in the SVI). Because all missing values are in missing rows, it's likely inappropraite to impute the values of entire rows. I chose to drop the 96 missing rows (of 3,240) for this reason.
+
+```{julia}
+using MultivariateStats
+using Statistics
+
+# dropping rows that are entirely missing (the only missing values in the data)
+dropmissing!(merged_subset)
+
+# defining two standardization functions
+function normal_standardize(x)
+    return (x .- mean(x)) ./ std(x)
+end
+
+function log_standardize(x)
+    return (x .- minimum(x)) ./ (maximum(x) - minimum(x))
+end
+
+# observing the distribution of the given SVI variables in the previous assignment
+distributions = ["nm", "log", "nm", "log", "log", "nm", "nm",
+"nm", "nm", "log", "log", "log", "log", "log", "log", "log",
+"nm"]
+function_list = [dist == "nm" ? normal_standardize : 
+log_standardize for dist in distributions]
+
+# standardizing columns of data using function list
+for (col, f) in zip(names(merged_subset), function_list)
+    transform!(merged_subset, Symbol(col) => f => Symbol(col))
+end
+
+# converting data to matrix
+X = Matrix{Float64}(merged_subset)
+
+# performing PCA
+M = fit(PCA, X'; method=:svd)
+```
+
+1. Plot the eigenvectors or loadings associated of the first three principal components.
+Make sure that the axis labels correspond to the variable names and not the indices of the variables.
+How would you interpret the first three prinicpal components?
+_Note: you can find the documentation for the SVI variables [here](https://www.atsdr.cdc.gov/placeandhealth/svi/documentation/SVI_documentation_2022.html)._
+
+```{julia}
+using Plots
+using RCall
+
+# create a dataframe of loadings
+loadings = DataFrame(M.proj, :auto)
+var_names = names(merged_subset)
+
+# plotting using R
+R"""
+# importing first three principal components
+counts = t(as.matrix($loadings[,1:3]))
+
+# open a PNG device
+png(filename = "images/hw3_loadings.png", width = 800, 
+height = 500, units = "px")
+
+# setting margins and dims
+par(mar = c(8, 4, 4, 2))
+
+# plotting
+barplot(counts, main="Loadings", 
+        col = c("#45aF84","#ce8644","#7995a5"), 
+        legend = c("PC1", "PC2", "PC3"), beside=T, 
+        ylim=c(-1,1), names.arg = $var_names, las=2)
+
+dev.off()
+"""
+
+display("image/png", read("images/hw3_loadings.png"))
+```
+
+This first principal component most heavily weighs the percentage of persons in a county that are below 150% of the federal poverty level, the percentage of households without internet, the percentage of persons with a disability, the percentage of single parent househoulds—and to a lesser extent—the percentage of households that spend a significant percentage of their income of housing with an annual income of less than \$75,000. The second principal component is a combination of the negative percentage of persons 65 or older, the positive percentage of persons 17 or younger (so heavily weighting population youngness), the percentage of single parent households, the negative percentage of person with a disability, and the the percentage of households that spend a significant percentage of their income of housing with an annual income of less than \$75,000. The third principal component is a combination of the negative percentage of households that spend a significant percentage of their income of housing with an annual income of less than \$75,000, the percentage of persons 17 or younger, and the percentage of households without internet.
+
+2. There are several different ways to determine the number of principal components to retain.
+One common method is to retain principal components that explain a certain percentage of the variance in the data.
+    a. How many principal components are needed to explain 80% of the variance in the data?
+    
+    **Four principal compnents are needed to explain at least 80% of the variance in the data (~86%).**
+
+    b. How many principal components are needed to explain 90% of the variance in the data?
+
+    **Five principal components are need to explain at least 90% of the variance in the data (~91%).**
+
+1. An alternative approach is to plot the eigenvalues of the principal components and retain the components that are above the "elbow" in the plot. In other words the eigenvalues that are substantially larger than the rest.
+    a. Create a [scree plot](https://en.wikipedia.org/wiki/Scree_plot) of the eigenvalues of the principal components.
+    a. How many principal components should be retained based on the scree plot? This video may help: [PCA Scree Plot](https://youtu.be/vFUvNICWVz4?si=6NbyRcLRGT8L1HzI)
+
+```{julia}
+# getting eigenvalues
+eigenvalues = M.prinvars
+
+# use R for plotting
+R"""
+# open a PNG device
+png(filename = "images/hw3_scree.png", width = 800, 
+height = 550, units = "px")
+
+plot($eigenvalues, type = "b",
+     main = "Scree Plot",
+     xlab = "Principal Component",
+     ylab = "Eigenvalue")
+
+dev.off()
+"""
+
+display("image/png", read("images/hw3_scree.png"))
+```
+
+Based on the scree plot, it appears that the "elbow" is at 4 principal components. After this point, including more principal components leads to diminshing returns in explained variance when adding more principal components. Thus, we should retain four principal components.
+
+3. Cross-validation is another method to determine the number of principal components to retain.
+This process requires some linear algebra that is beyond the scope of this course.
+As such, I have written example [code](https://github.com/gabehassler/PRGS-Intro-to-ML-2024/blob/main/examples/pca_cross_validation.jl) in Julia that demonstrates how to perform cross-validation.
+This procedure is a simplified version of an approach explained in this [blog post](https://alexhwilliams.info/itsneuronalblog/2018/02/26/crossval/).
+For the purposes of this assignment, the `pca_cv_error` function is a black box that returns the cross-validation error for a given number of principal components.
+_Note: If you use a different programming language, you can use ChatGPT to translate the code to your language of choice._
+    a. Compute the cross-validation error for 1 to 17 principal components. If this process is parallelizable, parallelize the code. If setting a random number seed would make this work more reproducible, set a random number seed.
+    a. How many principal components should be retained based on the cross-validation error?
+
+```{julia}
+# using code from Gabe Hassler
+using LinearAlgebra
+using Random
+
+# approximates the data matrix X using the first k principal components
+# X must be standardized to have mean 0 and standard deviation 1
+function pca_approx(X, k)
+    X_svd = svd(X)
+    Uk = X_svd.U[:, 1:k]
+    Sk = Diagonal(X_svd.S[1:k])
+    Vtk = X_svd.Vt[1:k, :]
+    return Uk * Sk * Vtk
+end
+
+# computes the cross-validated error of approximating X using the first k principal components
+# X must be standardized to have mean 0 and standard deviation 1
+# folds is a matrix of the same size as X with integers from 1 to n
+# typically folds will have the numbers 1:n randomly assigned for each element
+function pca_cv_error(X, k, folds)
+    fs = unique(folds)
+
+    # get the mean of each column of X
+    means = mean(X, dims=1)
+
+    # initialize the vector to store the errors
+    errs = zeros(length(fs))
+
+    # loop over the folds
+    for i in 1:length(fs)
+        f = fs[i]
+
+        # create a copy of X with the values of fold f replaced by the column means
+        X_cv = deepcopy(X)
+
+        # for all indices of X where the fold is f, replace the value with the column mean
+        for i in 1:size(X, 2)
+            for j in 1:size(X, 1)
+                if folds[j, i] == f
+                    X_cv[j, i] = means[i]
+                end
+            end
+        end
+
+        # approximate X_cv using the first k principal components
+        X̂ = pca_approx(X_cv, k)
+
+        # compute the error of the approximation for only the replaced values
+        err = 0.0
+        for i in 1:size(X, 2)
+            for j in 1:size(X, 1)
+                if folds[j, i] == f
+                    err += (X̂[j, i] - X[j, i])^2
+                end
+            end
+        end
+        errs[f] = err
+    end
+
+    # return the average error
+    return sum(errs) / length(X)
+end
+
+# set seed for reproducibility
+Random.seed!(666)
+
+# create a matrix of random folds
+n_folds = 20
+folds = rand(1:n_folds, size(X, 1), size(X, 2))
+
+# compute the cross-validated error of approximating X
+errs = zeros(17)
+
+# run pca_cv_error in parallel
+Threads.@threads for k = 1:17
+    errs[k] = pca_cv_error(X, k, folds)
+end
+
+# plotting average cross-validation error
+R"""
+# open a PNG device
+png(filename = "images/hw3_cv_plot.png", width = 800, 
+height = 550, units = "px")
+
+plot($errs, type = "b",
+     main = "Cross-Validation Error Plot",
+     xlab = "Principal Components",
+     ylab = "Average Cross-Validation Error",
+     xaxt="n")
+axis(1, at = seq(1, 17))
+
+dev.off()
+"""
+
+display("image/png", read("images/hw3_cv_plot.png"))
+```
+
+The cross-validation error suggests that three principal components should be retained.

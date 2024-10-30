@@ -3,6 +3,9 @@
 # ignore files in data folder
 data/* 
 
+# ignore files in images folder
+images/*
+
 # ignore all pdf files
 *.pdf
 
