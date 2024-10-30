@@ -1,4 +1,3 @@
 # Intro-ML
 
-This is a test!!!!!!
-I have two branches - main branch and develop branch
+This is a private repository for the PRGS Intro ML course created by Joseph Matveyenko
