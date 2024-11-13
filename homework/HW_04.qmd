@@ -1,0 +1,207 @@
+---
+title: "Homework 4"
+format: 
+    html:
+        embed-resources: true
+---
+
+
+__Due Date:__ 2024-11-13 at 8:30 AM PT
+---
+
+
+__Name:__ Joseph Matveyenko
+
+
+## Preparation
+
+1. Download the [data file](https://github.com/gabehassler/PRGS-Intro-to-ML-2024/blob/main/data/processed/svi_covid.csv) from GitHub and place it in the _data/processed_ folder.
+
+
+
+## Homework - Regression Trees
+
+The goal of this analysis is to use a regression tree to predict the number of per-capita COVID-19 deaths in each county in the US using the SVI variables.
+
+1. Load the data file.
+
+```{julia}
+using Base.Filesystem
+using DataFrames
+using CSV
+
+# set working dir to main
+if basename(pwd()) == "homework" 
+    cd(dirname(pwd()))
+end
+
+# load pre-processed data and ensure FIPS is read as a string
+column_types = Dict(:fips_code => String)
+dat_path = "data/processed/svi_covid.csv"
+svi_covid = CSV.read(dat_path, types=column_types, DataFrame)
+first(svi_covid, 3)
+```
+
+2. Write the following functions:
+    - A function that fits a regression tree to data. The function should take as input the data, the outcome variable, the predictor variables, and the maximum depth of the tree. The function should return the fitted tree.
+    _Note: Many packages have functions that penalize the complexity of the tree to avoide overfitting. You should make sure that the function you write does not use any penalization for the complexity of the tree._
+    - A function that predicts the outcome variable using a fitted tree. The function should take as input the fitted tree and the data for which to make predictions. The function should return the predicted values.
+    - A function that calculates the mean squared error of the predictions. The function should take as input the predicted values and the true values. The function should return the mean squared error.
+
+```{julia}
+using DecisionTree
+using Statistics
+
+# function that fits regression tree to data
+function fit_regression_tree(features::Array, labels::Vector, max_depth::Int)
+    model = DecisionTreeRegressor(max_depth=max_depth, min_samples_leaf=1, min_samples_split=2)
+    fit!(model, features, labels)
+    return model
+end
+
+# function that predcicts outcome variable using a fitted tree
+function predict_tree_label(fitted_tree::DecisionTreeRegressor, new_features::Array)
+    return predict(fitted_tree, new_features)
+end
+
+# function to calculate MSE of predictions
+function prediction_mse(predictions::Vector, true_values::Vector)
+    return mean((predictions .- true_values).^2)
+end
+```
+
+3. Use 5-fold cross-validation to calculate the mean squared error of the regression tree for maximum tree depths 1, ..., 10.
+The outcome variable is `total_deaths_per_100k` and the predictor variables are `EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT`.
+
+```{julia}
+using Random
+
+# function to perform k-fold cross validation
+function kfold_cv(features::Array, labels::Vector, max_depth::Integer, k::Integer)
+    # shuffle data
+    Random.seed!(666)
+    indices = shuffle(1:length(labels))
+
+    # calculate fold sizes
+    fold_sizes = fill(div(length(labels),k), k)
+    for i in 1:(length(labels) % k)
+        fold_sizes[i] += 1
+    end
+
+    # split indices into k folds
+    folds = []
+    start_idx = 1
+    for fold_size in fold_sizes
+        end_idx = start_idx + fold_size - 1
+        push!(folds, indices[start_idx:end_idx])
+        start_idx = end_idx + 1
+    end
+
+    mean_sq_errors = Float64[]
+    for i in 1:k
+        # define test and train set
+        test_indices = folds[i]
+        train_indices = vcat(folds[1:i-1]..., folds[i+1:end]...)
+
+        # split data
+        X_train = features[train_indices, :]
+        y_train = labels[train_indices]
+        X_test = features[test_indices, :]
+        y_test = labels[test_indices]
+
+        # train regression tree model
+        model = fit_regression_tree(X_train, y_train, max_depth)
+
+        # predict labels
+        predictions = predict_tree_label(model, X_test)
+
+        # calculate MSE
+        mse = prediction_mse(predictions, y_test)
+        push!(mean_sq_errors, mse)
+    end
+    
+    return mean(mean_sq_errors)
+end
+
+given_columns_str = "EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT"
+given_columns = strip.(split(given_columns_str, ","))
+features = Matrix(svi_covid[:, given_columns])
+labels = svi_covid.total_deaths_per_100k
+
+# calculate mean error with max tree depth 1-10
+kfold_errors = zeros(10)
+Threads.@threads for n = 1:10
+    kfold_errors[n] = kfold_cv(features, labels, n, 5)
+end
+```
+
+4. Plot the mean squared error as a function of the maximum tree depth.
+```{julia}
+using Plots
+using RCall
+
+# plotting mean squared error with respect to max_depth
+R"""
+# open a PNG device
+png(filename = "images/hw4_cv_plot.png", width = 800, 
+height = 550, units = "px")
+
+plot($kfold_errors, type = "b",
+     main = "Cross-Validation Error Plot",
+     xlab = "Maximum tree depth",
+     ylab = "Average mean squared error",
+     xaxt="n")
+axis(1, at = seq(1, 17))
+
+dev.off()
+"""
+
+display("image/png", read("images/hw4_cv_plot.png"))
+```
+
+5. Which maximum tree depth would you choose based on the cross-validation results? Why?
+
+I would choose a maximum tree depth of 2, because increasing the depth beyond 2 does not decrease the mean squared error as much as going from a maximum depth of 1 to 2. Although it appears that a maximum tree depth of 4 has the lowest mean squared error, the decrease is not substantial enough to justify increasing the maximum depth from 2 to 4. It is also not part of a broader trend of significantly decreasing mean squared error for steps 2-4, so it does not necessarily mean that a maximum depth of 4 would do a better job at predicting the outcome than a maximum depth of 2. It likely would be overfitting.
+
+6. Fit a regression tree to the full data using the maximum tree depth you chose in the previous question.
+
+```{julia}
+model = fit_regression_tree(features, labels, 2)
+```
+
+7. Plot the fitted tree. Summarize the tree in words. What variables seem to be the most important predictors of the number of per-capita COVID-19 deaths?
+```{julia}
+print_tree(model)
+```
+
+Note: Feature 17 is the percentage of persons without internet. Feature 8 is the percentage of persons with disabilities, and Feature 1 is the percentage of persons below 150% of the povery line. So, in counties where less than 13% of the population has internet and less than 14% of the population has disabilites, the predicted number of COVID-19 deaths per 100,000 is 269. In counties where less than 13% of the population has internet and more than 14% of the population has disabilities, the predicted number of COVID-19 deaths per 100,000 is 369. In counties where more than 13% of the population has internet and less than 27% of the population is below 150% poverty, the predicted number of COVID-19 deaths per 100,000 is 434, and in counties where more than 13% of the population has internet and more than 27% of the population is below 150% poverty, the predicted number of COVID-19 deaths per 100,000 is 546. So, the variables that seem to be the most predictive of per capita COVID-19 deaths are disability prevalence, access to internet, and population below the 150% poverty line.
+8. Plot the predicted values against the true values. How much would you trust the predictions of the regression tree? Why?
+
+```{julia}
+predicted_labels = predict_tree_label(model, features)
+
+# plotting predicted labels against true labels
+R"""
+# open a PNG device
+png(filename = "images/hw4_predicted_vs_true.png", width = 800, 
+height = 550, units = "px")
+
+# create scatter plot
+plot($labels, $predicted_labels, col="blue", pch=19, cex=0.5,
+     main="Predicted vs. True Values",
+     xlab="True values",
+     ylab="Predicted values")
+
+# Add a line for perfect predictions
+abline(0, 1, col="red", lty=2)
+
+# Add a legend
+legend("bottomright", legend=c("Observations", "Perfect Fit"), col=c("blue", "red"), pch=c(19, NA), lty=c(NA, 2))
+
+dev.off()
+"""
+
+display("image/png", read("images/hw4_predicted_vs_true.png"))
+```
+
+There appears to be a lot of variance in the error between true values and predicted values. While the predicted values capture some of the general trends, they are not precise estimates.
