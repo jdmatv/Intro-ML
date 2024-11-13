@@ -173,6 +173,8 @@ model = fit_regression_tree(features, labels, 2)
 ```{julia}
 print_tree(model)
 ```
+
+Note: Feature 17 is the percentage of persons without internet. Feature 8 is the percentage of persons with disabilities, and Feature 1 is the percentage of persons below 150% of the povery line. So, in counties where less than 13% of the population has internet and less than 14% of the population has disabilites, the predicted number of COVID-19 deaths per 100,000 is 269. In counties where less than 13% of the population has internet and more than 14% of the population has disabilities, the predicted number of COVID-19 deaths per 100,000 is 369. In counties where more than 13% of the population has internet and less than 27% of the population is below 150% poverty, the predicted number of COVID-19 deaths per 100,000 is 434, and in counties where more than 13% of the population has internet and more than 27% of the population is below 150% poverty, the predicted number of COVID-19 deaths per 100,000 is 546. So, the variables that seem to be the most predictive of per capita COVID-19 deaths are disability prevalence, access to internet, and population below the 150% poverty line.
 8. Plot the predicted values against the true values. How much would you trust the predictions of the regression tree? Why?
 
 ```{julia}
@@ -201,3 +203,5 @@ dev.off()
 
 display("image/png", read("images/hw4_predicted_vs_true.png"))
 ```
+
+There appears to be a lot of variance in the error between true values and predicted values. While the predicted values capture some of the general trends, they are not precise estimates.
