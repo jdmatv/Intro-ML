@@ -12,6 +12,7 @@ images/*
 *_files/*
 **/libs/*
 env/*
+.venv/*
 
 # ignore cache
 .DS_Store
