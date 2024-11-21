@@ -51,7 +51,6 @@ from torch import nn
 from torch.utils.data import random_split
 from torch.utils.data import DataLoader, Dataset
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 
 
 torch.manual_seed(666) # for reproducibility
@@ -71,10 +70,14 @@ class PandasDataset(Dataset):
         return self.x[idx], self.y[idx]
 
 # normalize and load data into class
+def standardize_dataframe(df):
+    means = df.mean()
+    std_devs = df.std()
+    return (df - means) / std_devs
+
 outcome = svi_covid.columns[2]
 predictors = 'EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT'.split(', ')
-scaler = StandardScaler()
-svi_covid[predictors] = scaler.fit_transform(svi_covid[predictors])
+svi_covid[predictors] = standardize_dataframe(svi_covid[predictors])
 svi_covid[outcome] = (svi_covid[outcome] - svi_covid[outcome].mean()) / svi_covid[outcome].std()
 dataset = PandasDataset(svi_covid, predictors, outcome)
 
@@ -153,6 +156,7 @@ def test(dataloader, model, loss_fn, losses):
 
 Now, we can train the neural network.
 ```{python}
+import time
 batch_size = 400 # number of observations to use in each iteration
 train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
@@ -161,10 +165,14 @@ train_losses = []
 test_losses = []
 
 epochs = 700 # you will want to play with this number
+
+t0 = time.time()
 for t in range(epochs):
     train(train_loader, model, loss_fn, optimizer, train_losses)
     test(test_loader, model, loss_fn, test_losses)
-print("Done!")
+t1 = time.time()
+elapsed = t1-t0
+print(f"Done! Elapsed time = {elapsed:.2f} seconds")
 ```
 
 Next, we plot the losses
@@ -215,7 +223,7 @@ plt.legend()
 plt.title("Actual vs Predicted")
 plt.show()
 
-print(f"Mean Squared Error of the test set predictions: {round(np.mean((y_test - y_test_pred)**2),4)}")
+print(f"Mean Squared Error of the test set predictions: {np.mean((y_test - y_test_pred)**2):.3f}")
 ```
 
 2. Repeat the analysis from the previous question, but this time use a more complicated neural network with more hidden layers and/or more nodes in the hidden layers.
@@ -226,20 +234,6 @@ What is the mean squared error of the predictions in the test set?
 Define a new neural network with more complexity and run on the same dataset
 ```{python}
 torch.manual_seed(666) # for reproducibility
-
-# special PyTorch class for loading data
-class PandasDataset(Dataset):
-    def __init__(self, dataframe, predictors, outcome):
-        x = np.array(dataframe[predictors].values).reshape(-1, len(predictors))
-        y = np.array(dataframe[outcome].values).reshape(-1, 1)
-        self.x = torch.tensor(x, dtype=torch.float32)
-        self.y = torch.tensor(y, dtype=torch.float32)
-
-    def __len__(self):
-        return len(self.x)
-
-    def __getitem__(self, idx):
-        return self.x[idx], self.y[idx]
 
 # load data into class
 dataset = PandasDataset(svi_covid, predictors, outcome)
@@ -333,10 +327,14 @@ train_losses = []
 test_losses = []
 
 epochs = 1900 # you will want to play with this number
+
+t0 = time.time()
 for t in range(epochs):
     train(train_loader, model, loss_fn, optimizer, train_losses)
     test(test_loader, model, loss_fn, test_losses)
-print("Done!")
+t1 = time.time()
+elased = t1-t0
+print(f"Done! Elapsed time = {elapsed:.2f} seconds")
 ```
 
 Plot the results and mean squared error
@@ -378,7 +376,7 @@ plt.legend()
 plt.title("Actual vs Predicted")
 plt.show()
 
-print(f"Mean Squared Error of the test set predictions: {round(np.mean((y_test - y_test_pred)**2),4)}")
+print(f"Mean Squared Error of the test set predictions: {np.mean((y_test - y_test_pred)**2):.3f}")
 ```
 
 3. Compare the predictions of the neural network in Question 2 to the predictions of the regression tree from the previous assignment. Which model would you use to predict the number of per-capita COVID-19 deaths? Why?
