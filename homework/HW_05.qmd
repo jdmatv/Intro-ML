@@ -171,8 +171,8 @@ for t in range(epochs):
     train(train_loader, model, loss_fn, optimizer, train_losses)
     test(test_loader, model, loss_fn, test_losses)
 t1 = time.time()
-elapsed = t1 - t0
-print(f"Done! Elapsed time: {elapsed:.2f} seconds")
+elapsed = t1-t0
+print(f"Done! Elapsed time = {elapsed:.2f} seconds")
 ```
 
 Next, we plot the losses
@@ -243,6 +243,16 @@ train_perc = 0.8 # 80% of the data will be used for training
 train_size = int(train_perc * len(dataset))
 test_size = len(dataset) - train_size
 train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
+# where/how will the code run?
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+print(f"Using {device} device")
 
 # define neural net
 class NeuralNetwork(nn.Module):
@@ -323,8 +333,8 @@ for t in range(epochs):
     train(train_loader, model, loss_fn, optimizer, train_losses)
     test(test_loader, model, loss_fn, test_losses)
 t1 = time.time()
-elapsed = t1 - t0
-print(f"Done! Elapsed time: {elapsed:.2f} seconds")
+elased = t1-t0
+print(f"Done! Elapsed time = {elapsed:.2f} seconds")
 ```
 
 Plot the results and mean squared error
