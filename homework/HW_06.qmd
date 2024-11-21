@@ -384,7 +384,7 @@ for t in range(epochs):
     train(train_loader, model, loss_fn, optimizer, train_losses)
     test(test_loader, model, loss_fn, test_losses)
 t1 = time.time()
-elased = t1-t0
+elapsed = t1-t0
 print(f"Done! Elapsed time = {elapsed:.2f} seconds")
 ```
 
@@ -429,6 +429,3 @@ plt.show()
 
 print(f"Mean Squared Error of the test set predictions: {np.mean((y_test - y_test_pred)**2):.3f}")
 ```
-
-__Note: You may have issues rendering Quarto if you set up a virtual environment.
-To solve these issues, you need to set the `QUARTO_PYTHON` environment variable to the path of the python executable in your virtual environment.__
