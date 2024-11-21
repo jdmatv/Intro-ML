@@ -333,7 +333,7 @@ for t in range(epochs):
     train(train_loader, model, loss_fn, optimizer, train_losses)
     test(test_loader, model, loss_fn, test_losses)
 t1 = time.time()
-elased = t1-t0
+elapsed = t1-t0
 print(f"Done! Elapsed time = {elapsed:.2f} seconds")
 ```
 
