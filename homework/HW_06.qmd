@@ -429,3 +429,5 @@ plt.show()
 
 print(f"Mean Squared Error of the test set predictions: {np.mean((y_test - y_test_pred)**2):.3f}")
 ```
+
+We do observe a change in computation speed when running it on the server. Running it locally took 18 seconds for the simple neural network and 62 seconds for the more complex neural network. There were modest gains in computation speed when running on the server with the simple neural network taking about 14 seconds and the complex taking 42 seconds. The speed on the server is likely dependent on your priority level and the load at the time you are using it. I think the speed is faster than before because running on a GPU should be faster, especially at a time when not a lot of people are using it.
