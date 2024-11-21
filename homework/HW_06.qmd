@@ -1,0 +1,433 @@
+---
+title: "Homework 6"
+format: 
+    html:
+        embed-resources: true
+execute:
+    python: env/bin/python3.11
+---
+
+
+__Due Date:__ 2024-11-27 at 8:30 AM PT
+---
+
+
+__Name:__ Joseph Matveyenko
+
+
+## Preparation
+
+
+### Connect to the server
+
+You will want to connect to the server named __Jules__.
+
+#### Mac / Linux: `ssh`
+
+Apple and Linux machines have ssh protocols built into the operating system.
+You can access a remote server using the `ssh` command:
+
+`ssh <server url / ip address>`
+
+#### Windows: putty
+
+Windows machines don't have build in ssh.
+However, [PuTTY](https://www.putty.org) provides the same functionality.
+PuTTY provides a command line interface as well as a GUI.
+
+#### VSCode (both Windows and Mac)
+
+You can also use VSCode to ssh into an online server.
+To do this, you need the [Remote-SSH VSCode extension](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.remote-ssh) (may or may not already be installed).
+To connect to a server in VSCode using ssh, access the VSCode command pallette (`ctrl + shift + P`) and type `ssh`.
+The `Remote-SSH: Connect to Host...` option will let you input a server to connect to.
+
+## Set up Torch with Cuda
+
+These instructions are from the [PyTorch installation instructions](https://pytorch.org/get-started/locally/).
+If CUDA is available, torch will probably find it when installing.
+```
+pip install torch
+```
+
+
+To see if CUDA is set, up, run:
+```{python}
+import torch
+
+# Get cpu, gpu or mps device for training.
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+print(f"Using {device} device")
+
+```
+
+## Homework - Neural Newtorks
+
+Run your previous homework (HW_05) on the Jules ACS server.
+Do you observe any change in computation speed?
+Explain why you think the computation speed is faster/slower/the same as before?
+
+1. Use a simple neural network to predict the number of per-capita COVID-19 deaths in each county in the US using the SVI variables.
+The outcome variable is `total_deaths_per_100k` and the predictor variables are `EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT`.
+The neural network should have one hidden layer with 10 nodes and use the ReLU activation function.
+Plot the predicted values against the true values.
+What is the mean squared error of the predictions in the test set?
+
+Loading in the data
+```{python}
+import os
+import pandas as pd
+
+# set working dir to main
+if (os.getcwd().split(os.sep)[-1]) == 'homework':
+    os.chdir(os.pardir)
+
+# load pre-processed data and ensure FIPS is read as a string
+dat_path = "data/processed/svi_covid.csv"
+svi_covid = pd.read_csv(dat_path, dtype={'fips_code': str}).drop('Unnamed: 0', axis=1).dropna()
+svi_covid.head(5)
+```
+
+Run a simple neural net using code by Gabe Hassler (PyTorch)
+```{python}
+# load packages
+import torch
+from torch import nn
+from torch.utils.data import random_split
+from torch.utils.data import DataLoader, Dataset
+import numpy as np
+
+
+torch.manual_seed(666) # for reproducibility
+
+# special PyTorch class for loading data
+class PandasDataset(Dataset):
+    def __init__(self, dataframe, predictors, outcome):
+        x = np.array(dataframe[predictors].values).reshape(-1, len(predictors))
+        y = np.array(dataframe[outcome].values).reshape(-1, 1)
+        self.x = torch.tensor(x, dtype=torch.float32)
+        self.y = torch.tensor(y, dtype=torch.float32)
+
+    def __len__(self):
+        return len(self.x)
+
+    def __getitem__(self, idx):
+        return self.x[idx], self.y[idx]
+
+# normalize and load data into class
+def standardize_dataframe(df):
+    means = df.mean()
+    std_devs = df.std()
+    return (df - means) / std_devs
+
+outcome = svi_covid.columns[2]
+predictors = 'EP_POV150, EP_UNEMP, EP_HBURD, EP_NOHSDP, EP_UNINSUR, EP_AGE65, EP_AGE17, EP_DISABL, EP_SNGPNT, EP_LIMENG, EP_MINRTY, EP_MUNIT, EP_MOBILE, EP_CROWD, EP_NOVEH, EP_GROUPQ, EP_NOINT'.split(', ')
+svi_covid[predictors] = standardize_dataframe(svi_covid[predictors])
+svi_covid[outcome] = (svi_covid[outcome] - svi_covid[outcome].mean()) / svi_covid[outcome].std()
+dataset = PandasDataset(svi_covid, predictors, outcome)
+
+# split into training and test sets
+train_perc = 0.8 # 80% of the data will be used for training
+train_size = int(train_perc * len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
+# where/how will the code run?
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+print(f"Using {device} device")
+
+# define neural net
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(len(predictors), 10), # the first number is the number of input features
+            nn.ReLU(),
+            nn.Linear(10, 1), # the second number is the number of output features
+        )
+
+    def forward(self, x):
+        estimates = self.linear_relu_stack(x)
+        return estimates
+
+model = NeuralNetwork().to(device) # load the model onto the appropriate device
+
+# define loss function
+loss_fn = nn.MSELoss()
+
+# define optimizer
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+
+def train(dataloader, model, loss_fn, optimizer, losses):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    model.train()
+    train_loss = 0
+    for batch, (X, y) in enumerate(dataloader):
+        X, y = X.to(device), y.to(device)
+
+        # Compute prediction error
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        train_loss += loss.item()
+    train_loss /= num_batches
+    losses.append(train_loss)
+
+def test(dataloader, model, loss_fn, losses):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    model.eval()
+    test_loss = 0
+    with torch.no_grad():
+        for X, y in dataloader:
+            X, y = X.to(device), y.to(device)
+            pred = model(X)
+            test_loss += loss_fn(pred, y).item()
+    test_loss /= num_batches
+    losses.append(test_loss)
+```
+
+Now, we can train the neural network.
+```{python}
+import time
+batch_size = 400 # number of observations to use in each iteration
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+train_losses = []
+test_losses = []
+
+epochs = 700 # you will want to play with this number
+
+t0 = time.time()
+for t in range(epochs):
+    train(train_loader, model, loss_fn, optimizer, train_losses)
+    test(test_loader, model, loss_fn, test_losses)
+t1 = time.time()
+elapsed = t1-t0
+print(f"Done! Elapsed time = {elapsed:.2f} seconds")
+```
+
+Next, we plot the losses
+```{python}
+import matplotlib.pyplot as plt
+
+plt.plot(train_losses, label="train")
+plt.plot(test_losses, label="test")
+plt.legend()
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.show()
+```
+
+and plot the predicted values against the true values and calculate mean squared error 
+```{python}
+import torch
+import numpy as np
+import matplotlib.pyplot as plt
+
+# extract test/train from dataset
+x_train = torch.cat([x.unsqueeze(0) for x, y in train_dataset], dim=0)
+y_train = torch.cat([y.unsqueeze(0) for x, y in train_dataset], dim=0)
+
+x_test = torch.cat([x.unsqueeze(0) for x, y in test_dataset], dim=0)
+y_test = torch.cat([y.unsqueeze(0) for x, y in test_dataset], dim=0)
+
+# move data to device
+x_train, y_train = x_train.to(device), y_train.to(device)
+x_test, y_test = x_test.to(device), y_test.to(device)
+
+# make predictions
+with torch.no_grad():
+    y_train_pred = model(x_train).cpu().numpy()
+    y_test_pred = model(x_test).cpu().numpy()
+
+# convert true values to numpy
+y_train = y_train.cpu().numpy()
+y_test = y_test.cpu().numpy()
+
+# plot results
+plt.scatter(y_train, y_train_pred, label="Training", alpha=0.6, s=8)
+plt.scatter(y_test, y_test_pred, label="Test", alpha=0.6, s=8)
+plt.plot(np.linspace(-4, 4, 2), np.linspace(-4, 4, 2), 'r--', label='Perfect fit')
+plt.xlabel("Actual")
+plt.ylabel("Predicted")
+plt.legend()
+plt.title("Actual vs Predicted")
+plt.show()
+
+print(f"Mean Squared Error of the test set predictions: {np.mean((y_test - y_test_pred)**2):.3f}")
+```
+
+2. Repeat the analysis from the previous question, but this time use a more complicated neural network with more hidden layers and/or more nodes in the hidden layers.
+You should experiment with different architectures and activation functions to see what works best.
+Plot the predicted values against the true values.
+What is the mean squared error of the predictions in the test set?
+
+Define a new neural network with more complexity and run on the same dataset
+```{python}
+torch.manual_seed(666) # for reproducibility
+
+# load data into class
+dataset = PandasDataset(svi_covid, predictors, outcome)
+
+# split into training and test sets
+train_perc = 0.8 # 80% of the data will be used for training
+train_size = int(train_perc * len(dataset))
+test_size = len(dataset) - train_size
+train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
+# where/how will the code run?
+device = (
+    "cuda"
+    if torch.cuda.is_available()
+    else "mps"
+    if torch.backends.mps.is_available()
+    else "cpu"
+)
+print(f"Using {device} device")
+
+# define neural net
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(len(predictors), 10), # the first number is the number of input features
+            nn.Tanh(),
+            nn.Linear(10, 50),
+            nn.Tanh(),
+            nn.Linear(50, 10),
+            nn.Tanh(),
+            nn.Linear(10, 10),
+            nn.ReLU(),
+            nn.Linear(10, 1), # the second number is the number of output features
+        )
+
+    def forward(self, x):
+        estimates = self.linear_relu_stack(x)
+        return estimates
+
+model = NeuralNetwork().to(device) # load the model onto the appropriate device
+
+# define loss function
+loss_fn = nn.MSELoss()
+
+# define optimizer
+optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+
+def train(dataloader, model, loss_fn, optimizer, losses):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    model.train()
+    train_loss = 0
+    for batch, (X, y) in enumerate(dataloader):
+        X, y = X.to(device), y.to(device)
+
+        # Compute prediction error
+        pred = model(X)
+        loss = loss_fn(pred, y)
+
+        # Backpropagation
+        loss.backward()
+        optimizer.step()
+        optimizer.zero_grad()
+
+        train_loss += loss.item()
+    train_loss /= num_batches
+    losses.append(train_loss)
+
+def test(dataloader, model, loss_fn, losses):
+    size = len(dataloader.dataset)
+    num_batches = len(dataloader)
+    model.eval()
+    test_loss = 0
+    with torch.no_grad():
+        for X, y in dataloader:
+            X, y = X.to(device), y.to(device)
+            pred = model(X)
+            test_loss += loss_fn(pred, y).item()
+    test_loss /= num_batches
+    losses.append(test_loss)
+```
+
+Train on the training data
+```{python}
+batch_size = 400 # number of observations to use in each iteration
+train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
+
+train_losses = []
+test_losses = []
+
+epochs = 1900 # you will want to play with this number
+
+t0 = time.time()
+for t in range(epochs):
+    train(train_loader, model, loss_fn, optimizer, train_losses)
+    test(test_loader, model, loss_fn, test_losses)
+t1 = time.time()
+elapsed = t1-t0
+print(f"Done! Elapsed time = {elapsed:.2f} seconds")
+```
+
+Plot the results and mean squared error
+```{python}
+plt.plot(train_losses, label="train")
+plt.plot(test_losses, label="test")
+plt.legend()
+plt.xlabel("Epoch")
+plt.ylabel("Loss")
+plt.show()
+
+# extract test/train from dataset
+x_train = torch.cat([x.unsqueeze(0) for x, y in train_dataset], dim=0)
+y_train = torch.cat([y.unsqueeze(0) for x, y in train_dataset], dim=0)
+
+x_test = torch.cat([x.unsqueeze(0) for x, y in test_dataset], dim=0)
+y_test = torch.cat([y.unsqueeze(0) for x, y in test_dataset], dim=0)
+
+# move data to device
+x_train, y_train = x_train.to(device), y_train.to(device)
+x_test, y_test = x_test.to(device), y_test.to(device)
+
+# make predictions
+with torch.no_grad():
+    y_train_pred = model(x_train).cpu().numpy()
+    y_test_pred = model(x_test).cpu().numpy()
+
+# convert true values to numpy
+y_train = y_train.cpu().numpy()
+y_test = y_test.cpu().numpy()
+
+# plot results
+plt.scatter(y_train, y_train_pred, label="Training", alpha=0.6, s=8)
+plt.scatter(y_test, y_test_pred, label="Test", alpha=0.6, s=8)
+plt.plot(np.linspace(-4, 4, 2), np.linspace(-4, 4, 2), 'r--', label='Perfect fit')
+plt.xlabel("Actual")
+plt.ylabel("Predicted")
+plt.legend()
+plt.title("Actual vs Predicted")
+plt.show()
+
+print(f"Mean Squared Error of the test set predictions: {np.mean((y_test - y_test_pred)**2):.3f}")
+```
+
+We do observe a change in computation speed when running it on the server. Running it locally took 18 seconds for the simple neural network and 62 seconds for the more complex neural network. There were modest gains in computation speed when running on the server with the simple neural network taking about 14 seconds and the complex taking 42 seconds. The speed on the server is likely dependent on your priority level and the load at the time you are using it. I think the speed is faster than before because running on a GPU should be faster, especially at a time when not a lot of people are using it.
